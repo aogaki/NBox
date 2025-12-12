@@ -1,4 +1,5 @@
 #include "EventAction.hh"
+#include "ConfigManager.hh"
 
 #include <iomanip>
 
@@ -29,40 +30,52 @@ void EventAction::EndOfEventAction(const G4Event *event)
            << std::fixed << std::setprecision(1) << progress << "%)" << G4endl;
   }
 
-  // HitsCollection IDを取得
-  if (fHCID < 0) {
-    fHCID = G4SDManager::GetSDMpointer()->GetCollectionID("NBoxHitsCollection");
+  // Initialize hits collection IDs on first event
+  if (!fHCIDsInitialized) {
+    auto* config = ConfigManager::GetInstance();
+    auto* sdManager = G4SDManager::GetSDMpointer();
+
+    fHCIDs.clear();
+    for (G4int i = 0; i < config->GetNumPlacements(); i++) {
+      const auto& placement = config->GetPlacement(i);
+      G4String hcName = G4String("He3HitsCollection_") + placement.name.c_str();
+      G4int hcID = sdManager->GetCollectionID(hcName);
+      fHCIDs.push_back(hcID);
+    }
+    fHCIDsInitialized = true;
   }
 
   auto *hce = event->GetHCofThisEvent();
   if (!hce) return;
-
-  auto *hc = static_cast<NBoxHitsCollection *>(hce->GetHC(fHCID));
-  if (!hc) return;
-
-  // ヒットを処理
-  G4int nHits = hc->entries();
-  if (nHits == 0) return;
 
   auto *runAction = const_cast<RunAction *>(static_cast<const RunAction *>(
       G4RunManager::GetRunManager()->GetUserRunAction()));
 
   auto analysisManager = G4AnalysisManager::Instance();
 
-  for (G4int i = 0; i < nHits; ++i) {
-    auto *hit = (*hc)[i];
-    G4double edep = hit->GetEdep();
+  // Process hits from all detectors
+  for (size_t detIdx = 0; detIdx < fHCIDs.size(); detIdx++) {
+    auto *hc = static_cast<NBoxHitsCollection *>(hce->GetHC(fHCIDs[detIdx]));
+    if (!hc) continue;
 
-    if (edep > 0.) {
-      runAction->CountEvent();
+    G4int nHits = hc->entries();
+    if (nHits == 0) continue;
 
-      // ROOT ntupleにデータを書き込む
-      analysisManager->FillNtupleIColumn(0, event->GetEventID());
-      analysisManager->FillNtupleIColumn(1, hit->GetDetectorID());
-      analysisManager->FillNtupleSColumn(2, hit->GetDetectorName());
-      analysisManager->FillNtupleDColumn(3, edep / CLHEP::keV);
-      analysisManager->FillNtupleDColumn(4, hit->GetTime() / CLHEP::ns);
-      analysisManager->AddNtupleRow();
+    for (G4int i = 0; i < nHits; ++i) {
+      auto *hit = (*hc)[i];
+      G4double edep = hit->GetEdep();
+
+      if (edep > 0.) {
+        runAction->CountEvent();
+
+        // ROOT ntupleにデータを書き込む
+        analysisManager->FillNtupleIColumn(0, event->GetEventID());
+        analysisManager->FillNtupleIColumn(1, hit->GetDetectorID());
+        analysisManager->FillNtupleSColumn(2, hit->GetDetectorName());
+        analysisManager->FillNtupleDColumn(3, edep / CLHEP::keV);
+        analysisManager->FillNtupleDColumn(4, hit->GetTime() / CLHEP::ns);
+        analysisManager->AddNtupleRow();
+      }
     }
   }
 }

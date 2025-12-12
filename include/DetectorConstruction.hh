@@ -15,7 +15,9 @@ public:
     void ConstructSDandField() override;
 
 private:
-    G4LogicalVolume* fNBox_LV = nullptr;
+    // Store logical volumes for He3 tubes (for SD assignment)
+    std::vector<G4LogicalVolume*> fHe3TubeLVs;
+
     G4String fGeometryFile;
     G4String fDetectorFile;
 };

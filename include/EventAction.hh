@@ -14,7 +14,8 @@ public:
     void EndOfEventAction(const G4Event*) override;
 
 private:
-    G4int fHCID = -1;
+    std::vector<G4int> fHCIDs;  // Multiple hits collection IDs
+    bool fHCIDsInitialized = false;
 };
 
 #endif
