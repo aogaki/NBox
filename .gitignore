@@ -1,0 +1,56 @@
+# Build directory
+build/
+
+# ROOT output files
+*.root
+
+# Geant4 macro output
+*.out
+*.err
+*.log
+
+# Compiled binaries
+nbox_sim
+*.exe
+
+# Object files
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*~
+
+# Python bytecode (if any Python scripts are added)
+__pycache__/
+*.pyc
+*.pyo
+
+# Documentation build
+docs/_build/
+
+TODO

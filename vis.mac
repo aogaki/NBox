@@ -1,0 +1,14 @@
+/vis/open OGL 800x600-0+0
+/vis/viewer/set/autoRefresh false
+/vis/verbose errors
+
+/vis/drawVolume
+/vis/viewer/set/viewpointThetaPhi 45 45
+/vis/viewer/set/style surface
+
+/vis/scene/add/trajectories smooth
+/vis/scene/add/hits
+/vis/scene/endOfEventAction accumulate 10
+
+/vis/viewer/set/autoRefresh true
+/vis/verbose warnings

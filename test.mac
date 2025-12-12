@@ -1,0 +1,23 @@
+# Scintilator geometry in mm
+/LGSO/Geo/T 800.
+/LGSO/Geo/L 800.
+/LGSO/Geo/W 800.
+
+# Gamma source parameters
+# The center of source
+/LGSO/Source/X 0.
+/LGSO/Source/Y 0.
+/LGSO/Source/Z 0.
+
+# The source is defined as rectangle shape
+# These are size of the source
+/LGSO/Source/L 0.
+/LGSO/Source/W 0.
+
+# If this is set as true, the source geometry is same as experiment
+# and take into account needle crystal (that means momentum direction
+# of gamma is not (0, 0, 1))
+/LGSO/Source/Flag false
+
+/run/beamOn 1000000
+
