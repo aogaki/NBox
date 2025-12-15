@@ -55,8 +55,12 @@ public:
     bool IsGeometryLoaded() const { return fGeometryLoaded; }
     bool IsDetectorLoaded() const { return fDetectorLoaded; }
     bool IsSourceLoaded() const { return fSourceLoaded; }
+    void ValidateConfiguration() const;
 
     void PrintConfiguration() const;
+
+    // Testing support - Reset singleton state
+    void Reset();
 
 private:
     ConfigManager() = default;

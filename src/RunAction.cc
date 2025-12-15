@@ -1,4 +1,6 @@
 #include "RunAction.hh"
+#include "NBoxConstants.hh"
+
 #include "G4AccumulableManager.hh"
 #include "G4AnalysisManager.hh"
 #include "G4Run.hh"
@@ -9,15 +11,15 @@ RunAction::RunAction()
 {
     G4AccumulableManager::Instance()->Register(fEventCount);
 
-    // ROOTファイル出力設定
+    // Configure ROOT file output
     auto analysisManager = G4AnalysisManager::Instance();
     analysisManager->SetDefaultFileType("root");
     analysisManager->SetVerboseLevel(1);
 
-    // ファイルマージングを無効化 - 各スレッドで個別のファイルを保持
+    // Disable file merging - each thread maintains separate file
     analysisManager->SetNtupleMerging(false);
 
-    // Ntupleの定義
+    // Define Ntuple structure
     analysisManager->CreateNtuple("NBox", "Energy Deposition");
     analysisManager->CreateNtupleIColumn("EventID");      // column 0
     analysisManager->CreateNtupleIColumn("DetectorID");   // column 1
@@ -44,7 +46,7 @@ void RunAction::BeginOfRunAction(const G4Run* run)
                << " worker threads" << G4endl;
     }
 
-    // 各スレッドでファイルをオープン
+    // Open file for each thread
     G4String fileName = "output_run" + std::to_string(run->GetRunID());
     analysisManager->OpenFile(fileName);
 }

@@ -1,0 +1,11 @@
+{
+  "detectors": [
+    {
+      "name": "TestDetector_Standard",
+      "Diameter": 25.4,
+      "Length": 1000.0,
+      "WallT": 0.8,
+      "Pressure": 405.3
+    }
+  ]
+}

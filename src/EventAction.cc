@@ -1,5 +1,6 @@
 #include "EventAction.hh"
 #include "ConfigManager.hh"
+#include "NBoxConstants.hh"
 
 #include <iomanip>
 
@@ -14,14 +15,14 @@
 
 void EventAction::BeginOfEventAction(const G4Event *)
 {
-  // 必要に応じて初期化
+  // Initialize as needed
 }
 
 void EventAction::EndOfEventAction(const G4Event *event)
 {
-  // Progress report: print every 1000 events
+  // Progress report: print every N events
   G4int eventID = event->GetEventID();
-  if (eventID % 1000 == 0 && eventID > 0) {
+  if (eventID % NBoxConstants::PROGRESS_REPORT_INTERVAL == 0 && eventID > 0) {
     G4RunManager *runManager = G4RunManager::GetRunManager();
     const G4Run *currentRun = runManager->GetCurrentRun();
     G4int totalEvents = currentRun->GetNumberOfEventToBeProcessed();
@@ -68,12 +69,12 @@ void EventAction::EndOfEventAction(const G4Event *event)
       if (edep > 0.) {
         runAction->CountEvent();
 
-        // ROOT ntupleにデータを書き込む
-        analysisManager->FillNtupleIColumn(0, event->GetEventID());
-        analysisManager->FillNtupleIColumn(1, hit->GetDetectorID());
-        analysisManager->FillNtupleSColumn(2, hit->GetDetectorName());
-        analysisManager->FillNtupleDColumn(3, edep / CLHEP::keV);
-        analysisManager->FillNtupleDColumn(4, hit->GetTime() / CLHEP::ns);
+        // Write data to ROOT ntuple
+        analysisManager->FillNtupleIColumn(NBoxConstants::NTUPLE_COL_EVENT_ID, event->GetEventID());
+        analysisManager->FillNtupleIColumn(NBoxConstants::NTUPLE_COL_DETECTOR_ID, hit->GetDetectorID());
+        analysisManager->FillNtupleSColumn(NBoxConstants::NTUPLE_COL_DETECTOR_NAME, hit->GetDetectorName());
+        analysisManager->FillNtupleDColumn(NBoxConstants::NTUPLE_COL_EDEP_KEV, edep / CLHEP::keV);
+        analysisManager->FillNtupleDColumn(NBoxConstants::NTUPLE_COL_TIME_NS, hit->GetTime() / CLHEP::ns);
         analysisManager->AddNtupleRow();
       }
     }

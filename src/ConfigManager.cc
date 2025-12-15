@@ -35,6 +35,33 @@ ConfigManager::~ConfigManager()
     }
 }
 
+void ConfigManager::Reset()
+{
+    // Clear all configuration data
+    fDetectorConfigs.clear();
+    fPlacements.clear();
+
+    // Clean up ROOT objects
+    if (fSourceHist) {
+        delete fSourceHist;
+        fSourceHist = nullptr;
+    }
+    if (fSourceFunc) {
+        delete fSourceFunc;
+        fSourceFunc = nullptr;
+    }
+
+    // Reset all flags
+    fGeometryLoaded = false;
+    fDetectorLoaded = false;
+    fSourceLoaded = false;
+
+    // Reset box geometry
+    fBoxX = 0;
+    fBoxY = 0;
+    fBoxZ = 0;
+}
+
 void ConfigManager::LoadDetectorFile(const std::string& filepath)
 {
     std::ifstream file(filepath);
@@ -199,6 +226,23 @@ const DetectorPlacement& ConfigManager::GetPlacement(int index) const
         throw std::out_of_range("Placement index out of range");
     }
     return fPlacements[index];
+}
+
+void ConfigManager::ValidateConfiguration() const
+{
+    // Check that detector configurations are loaded if geometry is loaded
+    if (fGeometryLoaded && !fDetectorLoaded) {
+        throw std::runtime_error("Geometry is loaded but detector configurations are missing. Please provide detector file with -d option.");
+    }
+
+    // Check that all placements reference valid detector types
+    if (fGeometryLoaded && fDetectorLoaded) {
+        for (const auto& pl : fPlacements) {
+            if (!HasDetectorType(pl.type)) {
+                throw std::runtime_error("Placement '" + pl.name + "' references unknown detector type '" + pl.type + "'");
+            }
+        }
+    }
 }
 
 void ConfigManager::PrintConfiguration() const

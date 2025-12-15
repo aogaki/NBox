@@ -1,0 +1,21 @@
+{
+  "Box": {
+    "x": 2000.0,
+    "y": 2000.0,
+    "z": 2000.0
+  },
+  "Placements": [
+    {
+      "name": "Det1",
+      "type": "TestDetector_Standard",
+      "R": 0.0,
+      "Phi": 0.0
+    },
+    {
+      "name": "Det2",
+      "type": "TestDetector_Standard",
+      "R": 100.0,
+      "Phi": 0.0
+    }
+  ]
+}

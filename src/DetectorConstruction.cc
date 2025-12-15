@@ -1,6 +1,7 @@
 #include "DetectorConstruction.hh"
 #include "NBoxSD.hh"
 #include "ConfigManager.hh"
+#include "NBoxConstants.hh"
 
 #include "G4NistManager.hh"
 #include "G4Box.hh"
@@ -35,14 +36,17 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // ==================== Materials ====================
 
     // Define unit conversions
-    G4double kPa = 1000.0 * hep_pascal;
+    G4double kPa = NBoxConstants::KPA_TO_PASCAL * hep_pascal;
 
     // 1. He3 Isotope and Element (critical for thermal neutron capture!)
     // IMPORTANT: Must use isotope, not natural helium (which is 99.99986% He4)
     // He3(n,p)H3 has ~5330 barn cross-section at thermal energies
-    G4Isotope* He3_isotope = new G4Isotope("He3", 2, 3, 3.016029*g/mole);
+    G4Isotope* He3_isotope = new G4Isotope("He3",
+        NBoxConstants::HE3_ATOMIC_NUMBER,
+        NBoxConstants::HE3_MASS_NUMBER,
+        NBoxConstants::HE3_MOLAR_MASS*g/mole);
     G4Element* He3 = new G4Element("Helium3", "He3", 1);
-    He3->AddIsotope(He3_isotope, 100.*perCent);
+    He3->AddIsotope(He3_isotope, NBoxConstants::HE3_ISOTOPE_ABUNDANCE*perCent);
 
     // 2. Plastic Box Material (High-density polyethylene)
     G4Material* plastic = nist->FindOrBuildMaterial("G4_POLYETHYLENE");
@@ -56,7 +60,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // ==================== World Volume ====================
 
     // World size should be larger than the plastic box
-    G4double worldSize = 5.0 * m;  // Large enough for any configuration
+    G4double worldSize = NBoxConstants::WORLD_SIZE;
 
     auto* worldS = new G4Box("World", worldSize/2, worldSize/2, worldSize/2);
     auto* worldLV = new G4LogicalVolume(worldS, air, "World");
@@ -76,7 +80,11 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     new G4PVPlacement(nullptr, {}, plasticBoxLV, "PlasticBox", worldLV, false, 0);
 
     // Visualization for plastic box
-    auto* plasticVis = new G4VisAttributes(G4Colour(0.8, 0.8, 0.8, 0.3));  // Light gray, transparent
+    auto* plasticVis = new G4VisAttributes(G4Colour(
+        NBoxConstants::VIS_PLASTIC_R,
+        NBoxConstants::VIS_PLASTIC_G,
+        NBoxConstants::VIS_PLASTIC_B,
+        NBoxConstants::VIS_PLASTIC_ALPHA));
     plasticBoxLV->SetVisAttributes(plasticVis);
 
     // ==================== He3 Detector Tubes ====================
@@ -105,9 +113,9 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
         // Create He3 gas material for this tube with specific pressure
         G4double he3Pressure = detConfig.pressure * kPa;
-        G4double temperature = 293.15 * kelvin;
-        G4double molarMass = 3.016 * g/mole;
-        G4double gasConstant = 8.314 * joule/(mole*kelvin);
+        G4double temperature = NBoxConstants::ROOM_TEMPERATURE;
+        G4double molarMass = NBoxConstants::HE3_MOLAR_MASS * g/mole;
+        G4double gasConstant = NBoxConstants::GAS_CONSTANT * joule/(mole*kelvin);
         G4double he3Density = (he3Pressure * molarMass) / (gasConstant * temperature);
 
         G4String he3MatName = G4String("He3Gas_") + placement.name.c_str();
@@ -131,7 +139,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         // Create aluminum tube (outer cylinder)
         G4String alTubeName = G4String("AlTube_") + placement.name.c_str();
         G4String alTubeLVName = G4String("AlTube_LV_") + placement.name.c_str();
-        auto* alTubeS = new G4Tubs(alTubeName, 0, tubeOuterRadius, tubeLength/2, 0, 360*deg);
+        auto* alTubeS = new G4Tubs(alTubeName, 0, tubeOuterRadius, tubeLength/2, 0, NBoxConstants::FULL_CIRCLE_DEG*deg);
         auto* alTubeLV = new G4LogicalVolume(alTubeS, aluminum, alTubeLVName);
 
         // Rotation: tubes are along Z-axis by default, keep them vertical
@@ -141,7 +149,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         // Create He3 gas volume (inner cylinder)
         G4String he3GasName = G4String("He3Gas_") + placement.name.c_str();
         G4String he3GasLVName = G4String("He3Gas_LV_") + placement.name.c_str();
-        auto* he3GasS = new G4Tubs(he3GasName, 0, tubeInnerRadius, tubeLength/2, 0, 360*deg);
+        auto* he3GasS = new G4Tubs(he3GasName, 0, tubeInnerRadius, tubeLength/2, 0, NBoxConstants::FULL_CIRCLE_DEG*deg);
         auto* he3GasLV = new G4LogicalVolume(he3GasS, he3Gas, he3GasLVName);
 
         // Place He3 gas inside aluminum tube (at center)
@@ -152,10 +160,18 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         fHe3TubeLVs.push_back(he3GasLV);
 
         // Visualization
-        auto* alVis = new G4VisAttributes(G4Colour(0.7, 0.7, 0.7, 0.5));  // Gray aluminum
+        auto* alVis = new G4VisAttributes(G4Colour(
+            NBoxConstants::VIS_ALUMINUM_R,
+            NBoxConstants::VIS_ALUMINUM_G,
+            NBoxConstants::VIS_ALUMINUM_B,
+            NBoxConstants::VIS_ALUMINUM_ALPHA));
         alTubeLV->SetVisAttributes(alVis);
 
-        auto* he3Vis = new G4VisAttributes(G4Colour(0.0, 1.0, 0.0, 0.3));  // Green He3 gas
+        auto* he3Vis = new G4VisAttributes(G4Colour(
+            NBoxConstants::VIS_HE3_R,
+            NBoxConstants::VIS_HE3_G,
+            NBoxConstants::VIS_HE3_B,
+            NBoxConstants::VIS_HE3_ALPHA));
         he3GasLV->SetVisAttributes(he3Vis);
     }
 

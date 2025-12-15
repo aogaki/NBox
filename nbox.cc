@@ -80,6 +80,8 @@ int main(int argc, char** argv)
     auto* config = ConfigManager::GetInstance();
 
     try {
+        // Load configuration files in the order specified by user
+        // The order doesn't matter - validation happens after all files are loaded
         if (!geometryFile.empty()) {
             config->LoadGeometryFile(geometryFile);
         }
@@ -89,6 +91,9 @@ int main(int argc, char** argv)
         if (!sourceFile.empty()) {
             config->LoadSourceFile(sourceFile);
         }
+
+        // Validate configuration after all files are loaded
+        config->ValidateConfiguration();
     } catch (const std::exception& e) {
         G4cerr << "Error loading configuration: " << e.what() << G4endl;
         return 1;
