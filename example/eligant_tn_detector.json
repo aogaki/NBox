@@ -1,0 +1,11 @@
+{
+  "detectors": [
+    {
+      "name": "He3_ELIGANT",
+      "Diameter": 25.4,
+      "Length": 1000,
+      "WallT": 0.8,
+      "Pressure": 405.3
+    }
+  ]
+}

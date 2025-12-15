@@ -2,7 +2,8 @@
 #include "G4UImanager.hh"
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
-#include "QBBC.hh"
+#include "G4PhysListFactory.hh"
+#include "G4ThermalNeutrons.hh"
 
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
@@ -31,14 +32,12 @@ int main(int argc, char** argv)
     G4String geometryFile = "";
     G4String detectorFile = "";
     G4String sourceFile = "";
-    G4bool interactiveMode = (argc == 1);
 
     int opt;
     while ((opt = getopt(argc, argv, "m:g:d:s:h")) != -1) {
         switch (opt) {
             case 'm':
                 macroFile = optarg;
-                interactiveMode = false;
                 break;
             case 'g':
                 geometryFile = optarg;
@@ -57,6 +56,9 @@ int main(int argc, char** argv)
                 return 1;
         }
     }
+
+    // Interactive mode if no macro file is specified
+    G4bool interactiveMode = macroFile.empty();
 
     // Print configuration
     G4cout << "========== NBox Configuration ==========" << G4endl;
@@ -110,7 +112,14 @@ int main(int argc, char** argv)
     G4cout << "Running with " << nThreads << " threads (all available cores)" << G4endl;
 
     runManager->SetUserInitialization(new DetectorConstruction(geometryFile, detectorFile));
-    runManager->SetUserInitialization(new QBBC());
+
+    // Use QGSP_BIC_HP physics list with thermal neutron support
+    G4PhysListFactory factory;
+    G4VModularPhysicsList* phys = factory.GetReferencePhysList("QGSP_BIC_HP");
+    phys->RegisterPhysics(new G4ThermalNeutrons());
+    runManager->SetUserInitialization(phys);
+    G4cout << "Physics: QGSP_BIC_HP + G4ThermalNeutrons (for He3 capture)" << G4endl;
+
     runManager->SetUserInitialization(new ActionInitialization(sourceFile));
 
     G4VisManager* visManager = new G4VisExecutive();
@@ -120,20 +129,12 @@ int main(int argc, char** argv)
 
     if (ui) {
         // Interactive mode with visualization
-        UImanager->ApplyCommand("/control/execute vis.mac");
+        UImanager->ApplyCommand("/control/execute init_vis.mac");
         ui->SessionStart();
         delete ui;
     } else {
         // Batch mode
-        if (!macroFile.empty()) {
-            UImanager->ApplyCommand("/control/execute " + macroFile);
-        } else {
-            G4cerr << "Error: Macro file must be specified in batch mode!" << G4endl;
-            PrintUsage();
-            delete visManager;
-            delete runManager;
-            return 1;
-        }
+        UImanager->ApplyCommand("/control/execute " + macroFile);
     }
 
     delete visManager;

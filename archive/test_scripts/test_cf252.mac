@@ -1,0 +1,4 @@
+# Test Cf-252 TF1 source with He3 detectors
+/run/numberOfThreads 2
+/run/initialize
+/run/beamOn 1000

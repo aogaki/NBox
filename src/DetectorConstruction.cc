@@ -37,11 +37,15 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // Define unit conversions
     G4double kPa = 1000.0 * hep_pascal;
 
-    // 1. He3 Element (will be used for creating He3 gas materials)
-    G4Element* He3 = new G4Element("Helium3", "He3", 2., 3.016*g/mole);
+    // 1. He3 Isotope and Element (critical for thermal neutron capture!)
+    // IMPORTANT: Must use isotope, not natural helium (which is 99.99986% He4)
+    // He3(n,p)H3 has ~5330 barn cross-section at thermal energies
+    G4Isotope* He3_isotope = new G4Isotope("He3", 2, 3, 3.016029*g/mole);
+    G4Element* He3 = new G4Element("Helium3", "He3", 1);
+    He3->AddIsotope(He3_isotope, 100.*perCent);
 
-    // 2. Plastic Box Material (Polystyrene-based scintillator)
-    G4Material* plastic = nist->FindOrBuildMaterial("G4_POLYSTYRENE");
+    // 2. Plastic Box Material (High-density polyethylene)
+    G4Material* plastic = nist->FindOrBuildMaterial("G4_POLYETHYLENE");
 
     // 3. Aluminum for tube walls
     G4Material* aluminum = nist->FindOrBuildMaterial("G4_Al");

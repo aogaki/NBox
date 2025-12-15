@@ -5,6 +5,7 @@
 #include "G4SystemOfUnits.hh"
 #include "Randomize.hh"
 #include "TH1.h"
+#include "TF1.h"
 
 #include <cmath>
 
@@ -34,14 +35,19 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 {
-    // Sample neutron energy from ROOT histogram
+    // Sample neutron energy from ROOT histogram or function
     auto* config = ConfigManager::GetInstance();
     TH1* sourceHist = config->GetSourceHistogram();
+    TF1* sourceFunc = config->GetSourceFunction();
 
     G4double energy = 1.0 * MeV;  // Default energy
     if (sourceHist != nullptr) {
         // Sample energy from histogram (histogram is in MeV)
         energy = sourceHist->GetRandom() * MeV;
+    }
+    else if (sourceFunc != nullptr) {
+        // Sample energy from function (function is in MeV)
+        energy = sourceFunc->GetRandom() * MeV;
     }
     fParticleGun->SetParticleEnergy(energy);
 

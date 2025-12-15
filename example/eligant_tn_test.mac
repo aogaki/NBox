@@ -1,0 +1,8 @@
+# ELIGANT-TN Test Macro
+# Test the ELIGANT-TN geometry with thermal neutrons
+
+/run/numberOfThreads 14
+/run/initialize
+
+# Run 1000 events
+/run/beamOn 1000000

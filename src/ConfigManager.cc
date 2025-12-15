@@ -3,6 +3,7 @@
 #include "globals.hh"
 #include "TFile.h"
 #include "TH1.h"
+#include "TF1.h"
 #include "TKey.h"
 #include "TROOT.h"
 #include "TClass.h"
@@ -27,6 +28,10 @@ ConfigManager::~ConfigManager()
     if (fSourceHist) {
         delete fSourceHist;
         fSourceHist = nullptr;
+    }
+    if (fSourceFunc) {
+        delete fSourceFunc;
+        fSourceFunc = nullptr;
     }
 }
 
@@ -107,34 +112,65 @@ void ConfigManager::LoadSourceFile(const std::string& filepath)
         throw std::runtime_error("Cannot open source file: " + filepath);
     }
 
-    // Get first histogram in file
+    // Search for TH1 and TF1 objects in the file
     TIter next(file->GetListOfKeys());
     TKey* key = nullptr;
     TH1* hist = nullptr;
+    TF1* func = nullptr;
+    int sourceCount = 0;
 
     while ((key = (TKey*)next())) {
         TClass* cl = gROOT->GetClass(key->GetClassName());
-        if (!cl->InheritsFrom("TH1")) continue;
 
-        hist = (TH1*)key->ReadObj();
-        if (hist) break;
+        // Check for TH1 (histogram)
+        if (cl->InheritsFrom("TH1")) {
+            hist = (TH1*)key->ReadObj();
+            if (hist) sourceCount++;
+        }
+        // Check for TF1 (function)
+        else if (cl->InheritsFrom("TF1")) {
+            func = (TF1*)key->ReadObj();
+            if (func) sourceCount++;
+        }
     }
 
-    if (!hist) {
+    // Validate: exactly one source term should exist
+    if (sourceCount == 0) {
         file->Close();
         delete file;
-        throw std::runtime_error("No TH1 histogram found in source file: " + filepath);
+        throw std::runtime_error("No TH1 histogram or TF1 function found in source file: " + filepath);
     }
 
-    // Clone histogram to avoid dependency on file
-    fSourceHist = (TH1*)hist->Clone("source_histogram");
-    fSourceHist->SetDirectory(nullptr);
+    if (sourceCount > 1) {
+        file->Close();
+        delete file;
+        throw std::runtime_error("Multiple source terms found in file. Please use only one source term (TH1 or TF1) in a file: " + filepath);
+    }
+
+    // Load the source term (either histogram or function)
+    if (hist) {
+        // Clone histogram to avoid dependency on file
+        fSourceHist = (TH1*)hist->Clone("source_histogram");
+        fSourceHist->SetDirectory(nullptr);
+        G4cout << "Loaded source histogram: " << fSourceHist->GetName() << G4endl;
+    }
+    else if (func) {
+        // Clone function to avoid dependency on file
+        fSourceFunc = (TF1*)func->Clone("source_function");
+
+        // Pre-compute CDF table for thread-safe GetRandom() calls
+        // This must be done before multi-threading starts
+        fSourceFunc->GetRandom();  // First call creates the CDF table
+
+        G4cout << "Loaded source function: " << fSourceFunc->GetName()
+               << " [" << fSourceFunc->GetXmin() << ", " << fSourceFunc->GetXmax() << "] MeV" << G4endl;
+        G4cout << "  (CDF table pre-computed for thread-safe sampling)" << G4endl;
+    }
 
     file->Close();
     delete file;
 
     fSourceLoaded = true;
-    G4cout << "Loaded source histogram: " << fSourceHist->GetName() << G4endl;
 }
 
 const DetectorConfig& ConfigManager::GetDetectorConfig(const std::string& typeName) const
@@ -195,7 +231,13 @@ void ConfigManager::PrintConfiguration() const
     }
 
     if (fSourceLoaded) {
-        G4cout << "\nSource Histogram: " << fSourceHist->GetName() << G4endl;
+        if (fSourceHist) {
+            G4cout << "\nSource: TH1 Histogram - " << fSourceHist->GetName() << G4endl;
+        }
+        if (fSourceFunc) {
+            G4cout << "\nSource: TF1 Function - " << fSourceFunc->GetName()
+                   << " [" << fSourceFunc->GetXmin() << ", " << fSourceFunc->GetXmax() << "] MeV" << G4endl;
+        }
     }
 
     G4cout << "==========================================" << G4endl;

@@ -5,6 +5,7 @@
 #include <vector>
 
 class TH1;
+class TF1;
 
 // Individual detector configuration
 struct DetectorConfig {
@@ -48,6 +49,7 @@ public:
 
     // Source accessors
     TH1* GetSourceHistogram() const { return fSourceHist; }
+    TF1* GetSourceFunction() const { return fSourceFunc; }
 
     // Validation
     bool IsGeometryLoaded() const { return fGeometryLoaded; }
@@ -76,8 +78,9 @@ private:
     // Detector placements (references configs by index)
     std::vector<DetectorPlacement> fPlacements;
 
-    // Source histogram
+    // Source histogram or function (only one should be used)
     TH1* fSourceHist = nullptr;
+    TF1* fSourceFunc = nullptr;
 
     // Load status flags
     bool fGeometryLoaded = false;
