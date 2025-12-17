@@ -197,7 +197,8 @@ void DetectorConstruction::ConstructSDandField()
         const auto& placement = config->GetPlacement(i);
 
         // Create unique SD name and hits collection name
-        G4String sdName = G4String("He3SD_") + placement.name.c_str();
+        // Use placement name directly for SD (will appear in output as DetectorName)
+        G4String sdName = placement.name.c_str();
         G4String hcName = G4String("He3HitsCollection_") + placement.name.c_str();
 
         // Create SD with detector ID = i

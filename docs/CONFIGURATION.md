@@ -187,6 +187,7 @@ Then use different types in different positions.
     "y": <depth in mm>,
     "z": <height in mm>
   },
+  "mono_energy_MeV": <optional: fixed neutron energy in MeV>,
   "Placements": [
     {
       "name": "InstanceName",
@@ -220,6 +221,42 @@ Then use different types in different positions.
 | Small lab detector | 400 × 400 × 600 | 96 L | ~90 kg |
 | ELIGANT-TN | 660 × 660 × 1000 | 436 L | ~410 kg |
 | Large array | 1000 × 1000 × 1500 | 1500 L | ~1400 kg |
+
+### Neutron Source Configuration
+
+#### `mono_energy_MeV` (float, optional)
+- **Purpose:** Mono-energetic neutron source fallback
+- **Units:** MeV (Mega-electron volts)
+- **Range:** Typically 0.001 - 20 MeV
+- **When used:** Only when no source file (-s option) is provided
+- **Priority order:**
+  1. Source histogram (ROOT TH1) - if loaded with `-s` option
+  2. Source function (ROOT TF1) - if loaded with `-s` option
+  3. `mono_energy_MeV` - if specified in this file
+  4. Default fallback: 1.0 MeV
+
+**Usage scenarios:**
+- **Quick testing:** Simple mono-energetic runs without creating ROOT files
+- **Energy scans:** Change energy by editing JSON instead of regenerating histograms
+- **Calibration:** Fixed energy source for detector response testing
+
+**Example:**
+```json
+{
+  "Box": { "Type": "Box", "x": 660, "y": 660, "z": 1000 },
+  "mono_energy_MeV": 2.5,
+  "Placements": [ ... ]
+}
+```
+
+**Common neutron energies:**
+- `0.025e-6` MeV = 0.025 eV (thermal neutrons at room temperature)
+- `0.001` MeV = 1 keV (epithermal)
+- `1.0` MeV (fast neutrons)
+- `2.5` MeV (typical fission neutrons)
+- `14.1` MeV (D-T fusion neutrons)
+
+**Note:** If you provide a source file with `-s source.root`, the histogram/function in the file takes precedence over `mono_energy_MeV`.
 
 ### Placement Parameters
 

@@ -51,6 +51,10 @@ void ConfigManager::Reset()
         fSourceFunc = nullptr;
     }
 
+    // Reset mono energy
+    fMonoEnergy = 0.0;
+    fHasMonoEnergy = false;
+
     // Reset all flags
     fGeometryLoaded = false;
     fDetectorLoaded = false;
@@ -125,6 +129,13 @@ void ConfigManager::LoadGeometryFile(const std::string& filepath)
         pl.R = placement["R"];
         pl.Phi = placement["Phi"];
         fPlacements.push_back(pl);
+    }
+
+    // Parse optional mono-energetic source parameter
+    if (data.contains("mono_energy_MeV")) {
+        fMonoEnergy = data["mono_energy_MeV"];
+        fHasMonoEnergy = true;
+        G4cout << "Mono-energetic source: " << fMonoEnergy << " MeV" << G4endl;
     }
 
     fGeometryLoaded = true;
@@ -285,4 +296,14 @@ void ConfigManager::PrintConfiguration() const
     }
 
     G4cout << "==========================================" << G4endl;
+}
+
+double ConfigManager::GetMonoEnergy() const
+{
+    return fMonoEnergy;
+}
+
+bool ConfigManager::HasMonoEnergy() const
+{
+    return fHasMonoEnergy;
 }

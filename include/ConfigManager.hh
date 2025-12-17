@@ -50,6 +50,8 @@ public:
     // Source accessors
     TH1* GetSourceHistogram() const { return fSourceHist; }
     TF1* GetSourceFunction() const { return fSourceFunc; }
+    double GetMonoEnergy() const;
+    bool HasMonoEnergy() const;
 
     // Validation
     bool IsGeometryLoaded() const { return fGeometryLoaded; }
@@ -85,6 +87,10 @@ private:
     // Source histogram or function (only one should be used)
     TH1* fSourceHist = nullptr;
     TF1* fSourceFunc = nullptr;
+
+    // Mono-energetic source fallback
+    double fMonoEnergy = 0.0;  // MeV
+    bool fHasMonoEnergy = false;
 
     // Load status flags
     bool fGeometryLoaded = false;

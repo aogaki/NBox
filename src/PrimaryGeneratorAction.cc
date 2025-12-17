@@ -35,7 +35,11 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 {
-    // Sample neutron energy from ROOT histogram or function
+    // Sample neutron energy with priority:
+    // 1. ROOT histogram (if loaded)
+    // 2. ROOT function (if loaded)
+    // 3. Mono-energetic (if specified in config)
+    // 4. Default fallback (1.0 MeV)
     auto* config = ConfigManager::GetInstance();
     TH1* sourceHist = config->GetSourceHistogram();
     TF1* sourceFunc = config->GetSourceFunction();
@@ -48,6 +52,10 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
     else if (sourceFunc != nullptr) {
         // Sample energy from function (function is in MeV)
         energy = sourceFunc->GetRandom() * MeV;
+    }
+    else if (config->HasMonoEnergy()) {
+        // Use mono-energetic source
+        energy = config->GetMonoEnergy() * MeV;
     }
     fParticleGun->SetParticleEnergy(energy);
 
