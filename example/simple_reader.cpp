@@ -104,7 +104,7 @@ void InitHists(const std::vector<std::string> &detList)
     auto histName = "hist" + detName;
     auto histTitle = "Energy distribution: " + detName;
     TH1D *hist =
-        new TH1D(histName.c_str(), histTitle.c_str(), 10000, 0.0, 10000.0);
+        new TH1D(histName.c_str(), histTitle.c_str(), 1000, 0.0, 1000.0);
     hists.push_back(hist);
   }
 }
