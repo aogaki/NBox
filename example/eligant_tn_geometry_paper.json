@@ -1,0 +1,178 @@
+{
+  "Box": {
+    "Type": "Box",
+    "x": 460,
+    "y": 460,
+    "z": 640
+  },
+  "Placements": [
+    {
+      "name": "A1",
+      "type": "He3_ELIGANT",
+      "R": 59,
+      "Phi": 0
+    },
+    {
+      "name": "A2",
+      "type": "He3_ELIGANT",
+      "R": 59,
+      "Phi": 90
+    },
+    {
+      "name": "A3",
+      "type": "He3_ELIGANT",
+      "R": 59,
+      "Phi": 180
+    },
+    {
+      "name": "A4",
+      "type": "He3_ELIGANT",
+      "R": 59,
+      "Phi": 270
+    },
+    {
+      "name": "B1",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 22.5
+    },
+    {
+      "name": "B2",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 67.5
+    },
+    {
+      "name": "B3",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 112.5
+    },
+    {
+      "name": "B4",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 157.5
+    },
+    {
+      "name": "B5",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 202.5
+    },
+    {
+      "name": "B6",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 247.5
+    },
+    {
+      "name": "B7",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 292.5
+    },
+    {
+      "name": "B8",
+      "type": "He3_ELIGANT",
+      "R": 130,
+      "Phi": 337.5
+    },
+    {
+      "name": "C1",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 11.25
+    },
+    {
+      "name": "C2",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 33.75
+    },
+    {
+      "name": "C3",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 56.25
+    },
+    {
+      "name": "C4",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 78.75
+    },
+    {
+      "name": "C5",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 101.25
+    },
+    {
+      "name": "C6",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 123.75
+    },
+    {
+      "name": "C7",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 146.25
+    },
+    {
+      "name": "C8",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 168.75
+    },
+    {
+      "name": "C9",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 191.25
+    },
+    {
+      "name": "C10",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 213.75
+    },
+    {
+      "name": "C11",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 236.25
+    },
+    {
+      "name": "C12",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 258.75
+    },
+    {
+      "name": "C13",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 281.25
+    },
+    {
+      "name": "C14",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 303.75
+    },
+    {
+      "name": "C15",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 326.25
+    },
+    {
+      "name": "C16",
+      "type": "He3_ELIGANT",
+      "R": 155,
+      "Phi": 348.75
+    }
+  ]
+}

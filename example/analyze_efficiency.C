@@ -1,14 +1,14 @@
 // analyze_efficiency.C
 // Comprehensive efficiency analysis for NBox simulation output
 //
-// Usage: root -l analyze_efficiency.C
-//        Then call: analyze_efficiency("output_run0_t0.root", 100000)
-//        where 100000 is the total number of neutrons emitted
+// Usage: root -l -b -q analyze_efficiency.C
+//        (Run from build directory where output_run0_t*.root files exist)
 
 #include <iostream>
 #include <map>
 #include <set>
 #include <vector>
+#include "TChain.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1D.h"
@@ -19,43 +19,46 @@
 #include "TGraph.h"
 #include "TStyle.h"
 
-void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
-    // Open ROOT file
-    TFile* f = TFile::Open(filename);
-    if (!f || f->IsZombie()) {
-        std::cerr << "Error: Cannot open file " << filename << std::endl;
-        return;
-    }
+void analyze_efficiency() {
+    // Configuration - modify these as needed
+    const Long64_t total_neutrons = 1000000;
+    const char* file_pattern = "output_run0_t*.root";
+    const char* tree_name = "NBox";
 
-    // Get tree
-    TTree* hits = (TTree*)f->Get("hits");
-    if (!hits) {
-        std::cerr << "Error: Cannot find 'hits' tree in file" << std::endl;
-        f->Close();
+    // Merge all thread output files
+    TChain* hits = new TChain(tree_name);
+    Int_t nFiles = hits->Add(file_pattern);
+
+    if (nFiles == 0) {
+        std::cerr << "Error: No files found matching pattern " << file_pattern << std::endl;
+        delete hits;
         return;
     }
+    std::cout << "Found " << nFiles << " files to analyze" << std::endl;
 
     // Set branch addresses
     Int_t eventID, detectorID;
     Double_t edep_keV, time_ns;
-    std::string* detectorName = nullptr;
+    Char_t detectorName[100];
 
     hits->SetBranchAddress("EventID", &eventID);
     hits->SetBranchAddress("DetectorID", &detectorID);
-    hits->SetBranchAddress("DetectorName", &detectorName);
+    hits->SetBranchAddress("DetectorName", detectorName);
     hits->SetBranchAddress("Edep_keV", &edep_keV);
     hits->SetBranchAddress("Time_ns", &time_ns);
 
     // Data structures for analysis
     std::set<Int_t> uniqueEvents;
+    std::set<Int_t> fullEnergyEvents;
     std::map<Int_t, Long64_t> hitsPerDetector;
     std::map<Int_t, Double_t> energyPerDetector;
     std::map<Int_t, std::set<Int_t>> eventsPerDetector;
+    std::map<int, std::set<Int_t>> ringEvents;  // 0=A, 1=B, 2=C
 
     // Histograms
     TH1D* h_energy = new TH1D("h_energy", "Energy Deposition;Energy [keV];Counts", 200, 0, 1000);
     TH1D* h_energy_full = new TH1D("h_energy_full", "Energy (>600 keV);Energy [keV];Counts", 200, 0, 1000);
-    TH1D* h_time = new TH1D("h_time", "Time of Flight;Time [ns];Counts", 100, 0, 500);
+    TH1D* h_time = new TH1D("h_time", "Time of Flight;Time [ns];Counts", 200, 0, 1000);
 
     // Process all hits
     Long64_t nEntries = hits->GetEntries();
@@ -74,28 +77,26 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
         // Apply energy threshold for "full energy" analysis
         if (edep_keV > 600) {
             h_energy_full->Fill(edep_keV);
+            fullEnergyEvents.insert(eventID);
         }
 
         // Statistics per detector
         hitsPerDetector[detectorID]++;
         energyPerDetector[detectorID] += edep_keV;
         eventsPerDetector[detectorID].insert(eventID);
+
+        // Ring classification (A=0, B=1, C=2)
+        int ring = -1;
+        if (detectorName[0] == 'A') ring = 0;
+        else if (detectorName[0] == 'B') ring = 1;
+        else if (detectorName[0] == 'C') ring = 2;
+        if (ring >= 0) ringEvents[ring].insert(eventID);
     }
 
     // Calculate efficiencies
     Long64_t detected_events = uniqueEvents.size();
+    Long64_t full_energy_events = fullEnergyEvents.size();
     double intrinsic_efficiency = (double)detected_events / total_neutrons * 100.0;
-
-    // Count events with energy > 600 keV (full energy peak)
-    Long64_t full_energy_events = 0;
-    std::set<Int_t> fullEnergyEvents;
-    for (Long64_t i = 0; i < nEntries; i++) {
-        hits->GetEntry(i);
-        if (edep_keV > 600) {
-            fullEnergyEvents.insert(eventID);
-        }
-    }
-    full_energy_events = fullEnergyEvents.size();
     double full_energy_efficiency = (double)full_energy_events / total_neutrons * 100.0;
 
     // Get number of detectors
@@ -105,7 +106,8 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     std::cout << "\n========================================" << std::endl;
     std::cout << "EFFICIENCY ANALYSIS SUMMARY" << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Input file: " << filename << std::endl;
+    std::cout << "File pattern: " << file_pattern << std::endl;
+    std::cout << "Number of files: " << nFiles << std::endl;
     std::cout << "Total neutrons emitted: " << total_neutrons << std::endl;
     std::cout << "Total hits recorded: " << nEntries << std::endl;
     std::cout << "Unique events detected: " << detected_events << std::endl;
@@ -115,6 +117,21 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     std::cout << "  Intrinsic efficiency (any hit): " << intrinsic_efficiency << " %" << std::endl;
     std::cout << "  Full-energy efficiency (>600 keV): " << full_energy_efficiency << " %" << std::endl;
     std::cout << "  Average hits per detected event: " << (double)nEntries / detected_events << std::endl;
+    std::cout << "========================================" << std::endl;
+
+    // Ring efficiency
+    std::cout << "EFFICIENCY PER RING:" << std::endl;
+    double rA = ringEvents[0].size();
+    double rB = ringEvents[1].size();
+    double rC = ringEvents[2].size();
+    std::cout << "  Ring A (inner, 4 tubes):  " << rA / total_neutrons * 100.0 << " %" << std::endl;
+    std::cout << "  Ring B (middle, 8 tubes): " << rB / total_neutrons * 100.0 << " %" << std::endl;
+    std::cout << "  Ring C (outer, 16 tubes): " << rC / total_neutrons * 100.0 << " %" << std::endl;
+    std::cout << "========================================" << std::endl;
+    std::cout << "RING RATIOS:" << std::endl;
+    std::cout << "  R1/R2 (A/B): " << rA / rB << std::endl;
+    std::cout << "  R1/R3 (A/C): " << rA / rC << std::endl;
+    std::cout << "  R2/R3 (B/C): " << rB / rC << std::endl;
     std::cout << "========================================" << std::endl;
 
     // Per-detector efficiency
@@ -181,15 +198,12 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     gr_eff->SetMarkerColor(kRed);
     gr_eff->Draw("ALP");
 
-    // Plot 3: Hits per detector
+    // Plot 3: Time spectrum
     c1->cd(3);
-    TH1D* h_hits_per_det = new TH1D("h_hits_per_det", "Hits per Detector;Detector ID;Number of Hits",
-                                     nDetectors, -0.5, nDetectors - 0.5);
-    for (auto& p : hitsPerDetector) {
-        h_hits_per_det->Fill(p.first, p.second);
-    }
-    h_hits_per_det->SetFillColor(kGreen);
-    h_hits_per_det->Draw("HIST");
+    h_time->SetLineColor(kGreen+2);
+    h_time->SetLineWidth(2);
+    h_time->Draw("HIST");
+    gPad->SetLogy();
 
     // Plot 4: Summary text
     c1->cd(4);
@@ -224,7 +238,7 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     for (auto& p : eventsPerDetector) {
         Int_t detID = p.first;
         double eff = (double)p.second.size() / total_neutrons * 100.0;
-        h_eff_per_det->Fill(detID, eff);
+        h_eff_per_det->SetBinContent(detID + 1, eff);
     }
     h_eff_per_det->SetFillColor(kOrange);
     h_eff_per_det->Draw("HIST");
@@ -236,7 +250,7 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     for (auto& p : hitsPerDetector) {
         Int_t detID = p.first;
         double avg_e = energyPerDetector[detID] / p.second;
-        h_avg_energy->Fill(detID, avg_e);
+        h_avg_energy->SetBinContent(detID + 1, avg_e);
     }
     h_avg_energy->SetFillColor(kCyan);
     h_avg_energy->Draw("HIST");
@@ -245,52 +259,16 @@ void analyze_efficiency(const char* filename, Long64_t total_neutrons) {
     std::cout << "Plots saved to: per_detector_analysis.png" << std::endl;
 
     // Cleanup
+    delete hits;
     delete h_energy;
     delete h_energy_full;
     delete h_time;
-    delete h_hits_per_det;
     delete h_eff_per_det;
     delete h_avg_energy;
     delete gr_eff;
     delete pt;
     delete c1;
     delete c2;
-    delete detectorName;
-    f->Close();
-    delete f;
 
     std::cout << "\nAnalysis complete!" << std::endl;
-}
-
-// Helper function to analyze multiple files (e.g., all thread files)
-void analyze_efficiency_merged(const char* pattern, Long64_t total_neutrons) {
-    std::cout << "Merging files matching pattern: " << pattern << std::endl;
-
-    TChain* chain = new TChain("hits");
-    Int_t nFiles = chain->Add(pattern);
-
-    if (nFiles == 0) {
-        std::cerr << "Error: No files found matching pattern " << pattern << std::endl;
-        delete chain;
-        return;
-    }
-
-    std::cout << "Found " << nFiles << " files to merge" << std::endl;
-
-    // Create temporary merged file
-    TFile* ftemp = TFile::Open("_temp_merged.root", "RECREATE");
-    TTree* merged = chain->CloneTree(-1, "fast");
-    merged->Write();
-    ftemp->Close();
-
-    // Analyze merged file
-    analyze_efficiency("_temp_merged.root", total_neutrons);
-
-    // Cleanup
-    delete chain;
-    delete merged;
-    delete ftemp;
-
-    // Remove temporary file
-    gSystem->Unlink("_temp_merged.root");
 }
