@@ -21,10 +21,11 @@ void NBoxSD::Initialize(G4HCofThisEvent* hce)
     hce->AddHitsCollection(fHCID, fHitsCollection);
 
     // イベント毎に1つのヒット（エネルギー合算用）
-    auto* hit = new NBoxHit();
-    hit->SetDetectorName(SensitiveDetectorName);
-    hit->SetDetectorID(fDetectorID);
-    fHitsCollection->insert(hit);
+    fCurrentHit = new NBoxHit();
+    fCurrentHit->SetDetectorName(SensitiveDetectorName);
+    fCurrentHit->SetDetectorID(fDetectorID);
+    fHitsCollection->insert(fCurrentHit);
+    fFirstHit = true;  // Reset for new event
 }
 
 G4bool NBoxSD::ProcessHits(G4Step* step, G4TouchableHistory*)
@@ -32,14 +33,15 @@ G4bool NBoxSD::ProcessHits(G4Step* step, G4TouchableHistory*)
     G4double edep = step->GetTotalEnergyDeposit();
     if (edep == 0.) return false;
 
-    // 最初のヒットに加算
-    auto* hit = (*fHitsCollection)[0];
-    hit->AddEdep(edep);
+    // Use cached hit pointer (avoid collection lookup)
+    fCurrentHit->AddEdep(edep);
 
-    // 最初のヒット位置と時間を記録（オプション）
-    if (hit->GetTime() == 0.) {
-        hit->SetPosition(step->GetPreStepPoint()->GetPosition());
-        hit->SetTime(step->GetPreStepPoint()->GetGlobalTime());
+    // Record first hit position and time (use flag instead of time==0 check)
+    if (fFirstHit) {
+        fFirstHit = false;
+        auto* preStep = step->GetPreStepPoint();
+        fCurrentHit->SetPosition(preStep->GetPosition());
+        fCurrentHit->SetTime(preStep->GetGlobalTime());
     }
 
     return true;

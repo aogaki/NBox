@@ -16,8 +16,10 @@ public:
 
 private:
     NBoxHitsCollection* fHitsCollection = nullptr;
+    NBoxHit* fCurrentHit = nullptr;  // Cache pointer to avoid collection lookup
     G4int fHCID = -1;
     G4int fDetectorID = -1;
+    G4bool fFirstHit = true;  // Track first hit to avoid repeated time==0 check
 };
 
 #endif

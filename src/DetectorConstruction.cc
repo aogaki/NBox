@@ -14,6 +14,7 @@
 #include "G4RotationMatrix.hh"
 
 #include <cmath>
+#include <map>
 
 DetectorConstruction::DetectorConstruction(const G4String& geometryFile, const G4String& detectorFile)
     : fGeometryFile(geometryFile), fDetectorFile(detectorFile)
@@ -94,6 +95,26 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
     fHe3TubeLVs.clear();
 
+    // Cache materials by detector type to avoid redundant creation
+    std::map<G4String, G4Material*> he3MaterialCache;
+
+    // Pre-create shared visualization attributes (avoid per-detector allocation)
+    auto* alVis = new G4VisAttributes(G4Colour(
+        NBoxConstants::VIS_ALUMINUM_R,
+        NBoxConstants::VIS_ALUMINUM_G,
+        NBoxConstants::VIS_ALUMINUM_B,
+        NBoxConstants::VIS_ALUMINUM_ALPHA));
+    auto* he3Vis = new G4VisAttributes(G4Colour(
+        NBoxConstants::VIS_HE3_R,
+        NBoxConstants::VIS_HE3_G,
+        NBoxConstants::VIS_HE3_B,
+        NBoxConstants::VIS_HE3_ALPHA));
+
+    // Pre-compute constants
+    G4double temperature = NBoxConstants::ROOM_TEMPERATURE;
+    G4double molarMass = NBoxConstants::HE3_MOLAR_MASS * g/mole;
+    G4double gasConstant = NBoxConstants::GAS_CONSTANT * joule/(mole*kelvin);
+
     for (G4int i = 0; i < numPlacements; i++) {
         const auto& placement = config->GetPlacement(i);
 
@@ -111,16 +132,21 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4double tubeWallThickness = detConfig.wallT * mm;
         G4double tubeInnerRadius = tubeOuterRadius - tubeWallThickness;
 
-        // Create He3 gas material for this tube with specific pressure
-        G4double he3Pressure = detConfig.pressure * kPa;
-        G4double temperature = NBoxConstants::ROOM_TEMPERATURE;
-        G4double molarMass = NBoxConstants::HE3_MOLAR_MASS * g/mole;
-        G4double gasConstant = NBoxConstants::GAS_CONSTANT * joule/(mole*kelvin);
-        G4double he3Density = (he3Pressure * molarMass) / (gasConstant * temperature);
+        // Reuse He3 material if same detector type (same pressure)
+        G4Material* he3Gas = nullptr;
+        auto it = he3MaterialCache.find(placement.type);
+        if (it != he3MaterialCache.end()) {
+            he3Gas = it->second;
+        } else {
+            // Create new He3 gas material for this detector type
+            G4double he3Pressure = detConfig.pressure * kPa;
+            G4double he3Density = (he3Pressure * molarMass) / (gasConstant * temperature);
 
-        G4String he3MatName = G4String("He3Gas_") + placement.name.c_str();
-        auto* he3Gas = new G4Material(he3MatName, he3Density, 1, kStateGas, temperature, he3Pressure);
-        he3Gas->AddElement(He3, 1.0);
+            G4String he3MatName = G4String("He3Gas_") + placement.type.c_str();
+            he3Gas = new G4Material(he3MatName, he3Density, 1, kStateGas, temperature, he3Pressure);
+            he3Gas->AddElement(He3, 1.0);
+            he3MaterialCache[placement.type] = he3Gas;
+        }
 
         // Position: convert (R, Phi) to (x, y, z=0)
         G4double R = placement.R * mm;
@@ -159,19 +185,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         // Store He3 gas logical volume for SD assignment
         fHe3TubeLVs.push_back(he3GasLV);
 
-        // Visualization
-        auto* alVis = new G4VisAttributes(G4Colour(
-            NBoxConstants::VIS_ALUMINUM_R,
-            NBoxConstants::VIS_ALUMINUM_G,
-            NBoxConstants::VIS_ALUMINUM_B,
-            NBoxConstants::VIS_ALUMINUM_ALPHA));
+        // Use shared visualization attributes
         alTubeLV->SetVisAttributes(alVis);
-
-        auto* he3Vis = new G4VisAttributes(G4Colour(
-            NBoxConstants::VIS_HE3_R,
-            NBoxConstants::VIS_HE3_G,
-            NBoxConstants::VIS_HE3_B,
-            NBoxConstants::VIS_HE3_ALPHA));
         he3GasLV->SetVisAttributes(he3Vis);
     }
 

@@ -25,6 +25,15 @@ PrimaryGeneratorAction::PrimaryGeneratorAction(const G4String& sourceFile)
     // Set source position to center of plastic box
     fParticleGun->SetParticlePosition(G4ThreeVector(0, 0, 0));
 
+    // Cache source configuration once at construction (avoid per-event queries)
+    auto* config = ConfigManager::GetInstance();
+    fSourceHist = config->GetSourceHistogram();
+    fSourceFunc = config->GetSourceFunction();
+    fHasMonoEnergy = config->HasMonoEnergy();
+    if (fHasMonoEnergy) {
+        fMonoEnergy = config->GetMonoEnergy() * MeV;
+    }
+
     G4cout << "Neutron source initialized at (0, 0, 0)" << G4endl;
 }
 
@@ -35,41 +44,36 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 {
-    // Sample neutron energy with priority:
+    // Sample neutron energy with priority (using cached pointers):
     // 1. ROOT histogram (if loaded)
     // 2. ROOT function (if loaded)
     // 3. Mono-energetic (if specified in config)
     // 4. Default fallback (1.0 MeV)
-    auto* config = ConfigManager::GetInstance();
-    TH1* sourceHist = config->GetSourceHistogram();
-    TF1* sourceFunc = config->GetSourceFunction();
-
-    G4double energy = 1.0 * MeV;  // Default energy
-    if (sourceHist != nullptr) {
-        // Sample energy from histogram (histogram is in MeV)
-        energy = sourceHist->GetRandom() * MeV;
+    G4double energy;
+    if (fSourceHist != nullptr) {
+        energy = fSourceHist->GetRandom() * MeV;
     }
-    else if (sourceFunc != nullptr) {
-        // Sample energy from function (function is in MeV)
-        energy = sourceFunc->GetRandom() * MeV;
+    else if (fSourceFunc != nullptr) {
+        energy = fSourceFunc->GetRandom() * MeV;
     }
-    else if (config->HasMonoEnergy()) {
-        // Use mono-energetic source
-        energy = config->GetMonoEnergy() * MeV;
+    else if (fHasMonoEnergy) {
+        energy = fMonoEnergy;  // Already in Geant4 units
+    }
+    else {
+        energy = 1.0 * MeV;  // Default energy
     }
     fParticleGun->SetParticleEnergy(energy);
 
     // Generate isotropic 4π direction
     // Method: Sample cos(theta) uniformly in [-1, 1] and phi uniformly in [0, 2π]
-    G4double cosTheta = 2.0 * G4UniformRand() - 1.0;  // Uniform in [-1, 1]
+    G4double cosTheta = 2.0 * G4UniformRand() - 1.0;
     G4double sinTheta = std::sqrt(1.0 - cosTheta * cosTheta);
-    G4double phi = 2.0 * M_PI * G4UniformRand();      // Uniform in [0, 2π]
+    G4double phi = kTwoPi * G4UniformRand();
 
-    G4double x = sinTheta * std::cos(phi);
-    G4double y = sinTheta * std::sin(phi);
-    G4double z = cosTheta;
-
-    fParticleGun->SetParticleMomentumDirection(G4ThreeVector(x, y, z));
+    fParticleGun->SetParticleMomentumDirection(
+        G4ThreeVector(sinTheta * std::cos(phi),
+                      sinTheta * std::sin(phi),
+                      cosTheta));
 
     fParticleGun->GeneratePrimaryVertex(event);
 }
