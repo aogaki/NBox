@@ -64,6 +64,8 @@ void ConfigManager::Reset()
     fBoxX = 0;
     fBoxY = 0;
     fBoxZ = 0;
+    fBeamPipeDiameter = 0;
+    fHasBeamPipe = false;
 }
 
 void ConfigManager::LoadDetectorFile(const std::string& filepath)
@@ -115,6 +117,16 @@ void ConfigManager::LoadGeometryFile(const std::string& filepath)
     fBoxX = box["x"];
     fBoxY = box["y"];
     fBoxZ = box["z"];
+
+    // Parse optional beam pipe diameter
+    if (box.contains("BeamPipe")) {
+        fBeamPipeDiameter = box["BeamPipe"];
+        fHasBeamPipe = true;
+        G4cout << "Beam pipe diameter: " << fBeamPipeDiameter << " mm" << G4endl;
+    } else {
+        fBeamPipeDiameter = 0;
+        fHasBeamPipe = false;
+    }
 
     // Parse detector placements
     if (!data.contains("Placements")) {
@@ -276,6 +288,9 @@ void ConfigManager::PrintConfiguration() const
 
     if (fGeometryLoaded) {
         G4cout << "\nBox Geometry: (" << fBoxX << ", " << fBoxY << ", " << fBoxZ << ") mm" << G4endl;
+        if (fHasBeamPipe) {
+            G4cout << "Beam Pipe Diameter: " << fBeamPipeDiameter << " mm" << G4endl;
+        }
         G4cout << "Detector Placements:" << G4endl;
         for (const auto& pl : fPlacements) {
             G4cout << "  - " << pl.name

@@ -69,6 +69,11 @@ constexpr double VIS_HE3_G = 1.0;
 constexpr double VIS_HE3_B = 0.0;
 constexpr double VIS_HE3_ALPHA = 0.3;
 
+constexpr double VIS_BEAMPIPE_R = 0.0;
+constexpr double VIS_BEAMPIPE_G = 1.0;
+constexpr double VIS_BEAMPIPE_B = 1.0;
+constexpr double VIS_BEAMPIPE_ALPHA = 0.3;
+
 // Geometry constants
 constexpr double FULL_CIRCLE_DEG = 360.0;  // degrees
 

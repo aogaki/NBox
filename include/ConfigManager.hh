@@ -37,6 +37,8 @@ public:
     double GetBoxX() const { return fBoxX; }
     double GetBoxY() const { return fBoxY; }
     double GetBoxZ() const { return fBoxZ; }
+    double GetBeamPipeDiameter() const { return fBeamPipeDiameter; }
+    bool HasBeamPipe() const { return fHasBeamPipe; }
 
     // Detector configuration accessors
     int GetNumDetectorConfigs() const { return fDetectorConfigs.size(); }
@@ -76,6 +78,8 @@ private:
     double fBoxX = 0;
     double fBoxY = 0;
     double fBoxZ = 0;
+    double fBeamPipeDiameter = 0;
+    bool fHasBeamPipe = false;
 
     // Detector configurations (can have multiple types)
     // Stored in a vector, accessed by name lookup
