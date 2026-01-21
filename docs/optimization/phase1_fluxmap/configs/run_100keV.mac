@@ -1,0 +1,4 @@
+# Mono-energy neutron source: 100 keV
+/gun/particle neutron
+/gun/energy 100 keV
+/run/beamOn 1000000

@@ -7,7 +7,7 @@
 class ActionInitialization : public G4VUserActionInitialization
 {
 public:
-    ActionInitialization(const G4String& sourceFile = "");
+    ActionInitialization(const G4String& sourceFile = "", G4bool enableFluxMap = false);
     ~ActionInitialization() override = default;
 
     void BuildForMaster() const override;
@@ -15,6 +15,7 @@ public:
 
 private:
     G4String fSourceFile;
+    G4bool fEnableFluxMap{false};
 };
 
 #endif

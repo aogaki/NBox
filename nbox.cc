@@ -20,6 +20,7 @@ void PrintUsage()
     G4cout << "  -g <file>  Geometry file (JSON format)" << G4endl;
     G4cout << "  -d <file>  Detector description file (JSON format)" << G4endl;
     G4cout << "  -s <file>  Source term file (ROOT format)" << G4endl;
+    G4cout << "  -f         Enable flux map recording (thermal neutron tracking)" << G4endl;
     G4cout << "  -h         Show this help message" << G4endl;
     G4cout << G4endl;
     G4cout << "If no options are specified, interactive mode with visualization will start." << G4endl;
@@ -32,9 +33,10 @@ int main(int argc, char** argv)
     G4String geometryFile = "";
     G4String detectorFile = "";
     G4String sourceFile = "";
+    G4bool enableFluxMap = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "m:g:d:s:h")) != -1) {
+    while ((opt = getopt(argc, argv, "m:g:d:s:fh")) != -1) {
         switch (opt) {
             case 'm':
                 macroFile = optarg;
@@ -47,6 +49,9 @@ int main(int argc, char** argv)
                 break;
             case 's':
                 sourceFile = optarg;
+                break;
+            case 'f':
+                enableFluxMap = true;
                 break;
             case 'h':
                 PrintUsage();
@@ -73,6 +78,9 @@ int main(int argc, char** argv)
     }
     if (!sourceFile.empty()) {
         G4cout << "Source term file: " << sourceFile << G4endl;
+    }
+    if (enableFluxMap) {
+        G4cout << "Flux map recording: ENABLED" << G4endl;
     }
     G4cout << "========================================" << G4endl;
 
@@ -125,7 +133,7 @@ int main(int argc, char** argv)
     runManager->SetUserInitialization(phys);
     G4cout << "Physics: QGSP_BIC_HP + G4ThermalNeutrons (for He3 capture)" << G4endl;
 
-    runManager->SetUserInitialization(new ActionInitialization(sourceFile));
+    runManager->SetUserInitialization(new ActionInitialization(sourceFile, enableFluxMap));
 
     G4VisManager* visManager = new G4VisExecutive();
     visManager->Initialize();
