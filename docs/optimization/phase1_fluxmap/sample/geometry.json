@@ -1,0 +1,10 @@
+{
+  "Box": {
+    "Type": "Box",
+    "x": 1000,
+    "y": 1000,
+    "z": 1000,
+    "BeamPipe": 44
+  },
+  "Placements": []
+}
