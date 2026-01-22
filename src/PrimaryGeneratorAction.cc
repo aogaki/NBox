@@ -48,21 +48,24 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
     // 1. ROOT histogram (if loaded)
     // 2. ROOT function (if loaded)
     // 3. Mono-energetic (if specified in config)
-    // 4. Default fallback (1.0 MeV)
-    G4double energy;
+    // 4. Use G4ParticleGun's current energy (set by /gun/energy macro command)
     if (fSourceHist != nullptr) {
-        energy = fSourceHist->GetRandom() * MeV;
+        fParticleGun->SetParticleEnergy(fSourceHist->GetRandom() * MeV);
     }
     else if (fSourceFunc != nullptr) {
-        energy = fSourceFunc->GetRandom() * MeV;
+        fParticleGun->SetParticleEnergy(fSourceFunc->GetRandom() * MeV);
     }
     else if (fHasMonoEnergy) {
-        energy = fMonoEnergy;  // Already in Geant4 units
+        fParticleGun->SetParticleEnergy(fMonoEnergy);  // Already in Geant4 units
     }
-    else {
-        energy = 1.0 * MeV;  // Default energy
+    // else: use the energy already set in fParticleGun (via /gun/energy command)
+
+    // Debug output for first event
+    static bool firstEvent = true;
+    if (firstEvent) {
+        G4cout << "PRIMARY_ENERGY: " << fParticleGun->GetParticleEnergy() / CLHEP::eV << " eV" << G4endl;
+        firstEvent = false;
     }
-    fParticleGun->SetParticleEnergy(energy);
 
     // Generate isotropic 4π direction
     // Method: Sample cos(theta) uniformly in [-1, 1] and phi uniformly in [0, 2π]

@@ -7,7 +7,8 @@
 #include "G4SystemOfUnits.hh"
 #include "G4Threading.hh"
 
-RunAction::RunAction()
+RunAction::RunAction(G4bool enableFluxMap)
+    : fEnableFluxMap(enableFluxMap)
 {
     G4AccumulableManager::Instance()->Register(fEventCount);
 
@@ -19,7 +20,7 @@ RunAction::RunAction()
     // Disable file merging - each thread maintains separate file
     analysisManager->SetNtupleMerging(false);
 
-    // Define Ntuple structure
+    // Ntuple 0: Energy Deposition (existing)
     analysisManager->CreateNtuple("NBox", "Energy Deposition");
     analysisManager->CreateNtupleIColumn("EventID");      // column 0
     analysisManager->CreateNtupleIColumn("DetectorID");   // column 1
@@ -27,6 +28,19 @@ RunAction::RunAction()
     analysisManager->CreateNtupleDColumn("Edep_keV");     // column 3
     analysisManager->CreateNtupleDColumn("Time_ns");      // column 4
     analysisManager->FinishNtuple();
+
+    // Ntuple 1: Flux Map (optional, for thermal neutron tracking)
+    if (fEnableFluxMap) {
+        analysisManager->CreateNtuple("FluxMap", "Thermal Neutron Flux");
+        analysisManager->CreateNtupleIColumn("EventID");      // column 0
+        analysisManager->CreateNtupleDColumn("X_mm");         // column 1
+        analysisManager->CreateNtupleDColumn("Y_mm");         // column 2
+        analysisManager->CreateNtupleDColumn("Z_mm");         // column 3
+        analysisManager->CreateNtupleDColumn("Energy_eV");    // column 4
+        analysisManager->CreateNtupleDColumn("StepLength_mm"); // column 5
+        analysisManager->FinishNtuple();
+        G4cout << "Flux map recording enabled" << G4endl;
+    }
 }
 
 RunAction::~RunAction()
@@ -44,6 +58,9 @@ void RunAction::BeginOfRunAction(const G4Run* run)
     if (IsMaster()) {
         G4cout << "Running with " << G4Threading::GetNumberOfRunningWorkerThreads()
                << " worker threads" << G4endl;
+        if (fEnableFluxMap) {
+            G4cout << "Flux map recording: ENABLED" << G4endl;
+        }
     }
 
     // Open file for each thread
@@ -68,6 +85,9 @@ void RunAction::EndOfRunAction(const G4Run* run)
         G4cout << " Run ID: " << run->GetRunID() << G4endl;
         G4cout << " Number of events: " << nofEvents << G4endl;
         G4cout << " Events with hits: " << fEventCount.GetValue() << G4endl;
+        if (fEnableFluxMap) {
+            G4cout << " Flux map recording: ENABLED" << G4endl;
+        }
         G4cout << "=================================" << G4endl;
     }
 }
