@@ -43,7 +43,7 @@ void FluxSteppingAction::UserSteppingAction(const G4Step* step)
     }
 
     G4String volumeName = volume->GetName();
-    if (volumeName != "Plastic") {
+    if (volumeName != "ModeratorBox") {
         return;
     }
 

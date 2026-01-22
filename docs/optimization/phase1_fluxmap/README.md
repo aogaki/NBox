@@ -25,28 +25,24 @@ cd ../docs/optimization/phase1_fluxmap/scripts
 - `-d`: 検出器定義ファイル
 - `-m`: マクロファイル（エネルギー設定）
 
-### 2. 結果のマージ
+### 2. 解析
 
-シミュレーション後、スレッドファイルをマージ:
+解析スクリプト（`analyze_flux.C`）はTChainを使用してスレッドファイルを直接読み込むため、事前のマージ（hadd）は不要です。
 
 ```bash
-hadd -f 1MeV.root output_run0_t*.root
-mv 1MeV.root ../docs/optimization/phase1_fluxmap/simulations/
-rm output_run0_t*.root
+cd /Users/aogaki/WorkSpace/NBox/build
+
+# ROOTマクロで解析（TChainで直接スレッドファイルを読み込み）
+root -l -b -q '../docs/optimization/phase1_fluxmap/scripts/analyze_flux.C("output_run0_t*.root", "../docs/optimization/phase1_fluxmap/results", "1MeV", 10.0)'
 ```
 
-または`run_simulation.sh`を使用（自動でマージ）。
-
-### 3. 解析
+Pythonスクリプトを使う場合:
 
 ```bash
 cd docs/optimization/phase1_fluxmap/scripts
 
-# 単一ファイル解析
-python analyze_flux.py ../simulations/1MeV.root -o ../results/ -v 10
-
-# 全エネルギー比較
-python compare_energies.py ../simulations/*.root -o ../results/
+# uproot + TChainで解析（マージ不要）
+python analyze_flux_root.py /path/to/build/output_run0_t*.root -o ../results/ -v 10
 ```
 
 ## 出力ファイル
@@ -108,10 +104,10 @@ phase1_fluxmap/
 │   ├── run_5MeV.mac
 │   └── run_10MeV.mac
 ├── scripts/            # 解析スクリプト
-│   ├── run_simulation.sh
-│   ├── run_all_energies.sh
-│   ├── analyze_flux.py
-│   └── compare_energies.py
+│   ├── analyze_flux.C          # ROOTマクロ（TChain使用、マージ不要）
+│   ├── analyze_flux.py         # Python版（uproot使用）
+│   ├── analyze_flux_root.py    # Python版（ROOT/TChain使用）
+│   └── compare_energies.py     # エネルギー比較
 ├── simulations/        # シミュレーション結果
 │   └── (*.root)
 └── results/            # 解析結果

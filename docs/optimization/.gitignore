@@ -1,0 +1,15 @@
+# Virtual environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Optimization results (large, reproducible)
+results*/
+configs/
+
+# Temporary files
+*.tmp
+test_geometry.json

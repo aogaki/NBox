@@ -4,6 +4,7 @@
 #include "G4UIExecutive.hh"
 #include "G4PhysListFactory.hh"
 #include "G4ThermalNeutrons.hh"
+#include "Randomize.hh"
 
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
@@ -11,6 +12,7 @@
 
 #include <getopt.h>
 #include <iostream>
+#include <random>
 
 void PrintUsage()
 {
@@ -64,6 +66,12 @@ int main(int argc, char** argv)
 
     // Interactive mode if no macro file is specified
     G4bool interactiveMode = macroFile.empty();
+
+    // Initialize random seed using hardware random number generator
+    std::random_device rd;
+    G4long seed = static_cast<G4long>(rd()) << 32 | rd();
+    G4Random::setTheSeed(seed);
+    G4cout << "Random seed: " << seed << G4endl;
 
     // Print configuration
     G4cout << "========== NBox Configuration ==========" << G4endl;

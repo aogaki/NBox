@@ -1,4 +1,4 @@
-# He-3検出器配置最適化 詳細実装計画書
+ata# He-3検出器配置最適化 詳細実装計画書
 
 ## 1. 概要
 
@@ -34,47 +34,22 @@ Geant4標準のマクロコマンドでモノエナジー中性子を設定可�
 
 ---
 
-### 2.2 シミュレーション実行・結果マージスクリプト
+### 2.2 シミュレーション結果の解析
 
-#### 目的
-シミュレーション実行とROOTファイルのマージを自動化する。
+#### 方針
+解析スクリプトはROOTのTChainを使用してスレッドファイル（`output_run0_t*.root`）を直接読み込む。
+事前のマージ（hadd）は不要。
 
-#### 実装内容
+#### 実行例
 
-**run_simulation.sh**
 ```bash
-#!/bin/bash
-# Usage: ./run_simulation.sh <energy> <unit> <nevents>
-# Example: ./run_simulation.sh 1 keV 100000
+cd /Users/aogaki/WorkSpace/NBox/build
 
-ENERGY=$1
-UNIT=$2
-NEVENTS=$3
-OUTPUT_NAME="${ENERGY}${UNIT}"
+# シミュレーション実行
+./nbox_sim -f -g 4rings.json -d eligant_tn_detector.json -m run.mac
 
-# Run NBox
-./NBox -g geometry.json -d detector.json -m run.mac -n $NEVENTS
-
-# Merge thread files
-hadd -f ${OUTPUT_NAME}.root NBox_t*.root
-
-# Cleanup thread files (optional)
-rm -f NBox_t*.root
-```
-
-**run_all_energies.sh**
-```bash
-#!/bin/bash
-# Run simulations for all energy points
-
-NEVENTS=100000
-
-./run_simulation.sh 1 keV $NEVENTS
-./run_simulation.sh 10 keV $NEVENTS
-./run_simulation.sh 100 keV $NEVENTS
-./run_simulation.sh 1 MeV $NEVENTS
-./run_simulation.sh 5 MeV $NEVENTS
-./run_simulation.sh 10 MeV $NEVENTS
+# 解析（TChainで直接スレッドファイルを読み込み）
+root -l -b -q 'analyze_flux.C("output_run0_t*.root", "results", "1MeV", 10.0)'
 ```
 
 ---
@@ -604,89 +579,45 @@ class NBoxRunner:
 
         subprocess.run(cmd, cwd=self.build_dir, check=True)
 
-        # 結果マージ
-        self._merge_results(output_dir, energy, energy_unit)
-
-    def _merge_results(self, output_dir, energy, energy_unit):
-        """スレッドファイルをマージ"""
-        output_name = f"{energy}{energy_unit}.root"
-        thread_files = list(Path(self.build_dir).glob("NBox_t*.root"))
-
-        if thread_files:
-            cmd = ["hadd", "-f", str(Path(output_dir) / output_name)]
-            cmd.extend([str(f) for f in thread_files])
-            subprocess.run(cmd, check=True)
-
-            # クリーンアップ
-            for f in thread_files:
-                f.unlink()
+        # スレッドファイルのパスを返す（解析はTChainで直接読み込み）
+        thread_files = list(Path(self.build_dir).glob("output_run0_t*.root"))
+        return [str(f) for f in thread_files]
 ```
 
 ### 7.2 効率計算
 
-既存の `build/analyze_efficiency.C` を使用する。
+TChainを使用してスレッドファイルを直接読み込み、効率を計算する。
+マージ（hadd）は不要。
 
-#### 使用方法
-```bash
-cd build
-root -l -b -q analyze_efficiency.C
-```
-
-#### 機能
-- スレッドファイル（`output_run0_t*.root`）を自動マージ
-- 全体効率・リング別効率・検出器別効率を計算
-- エネルギー閾値 vs 効率のグラフ作成
-- プロット出力（`efficiency_analysis.png`, `per_detector_analysis.png`）
-
-#### 最適化での活用
-AI最適化スクリプトから呼び出す場合のラッパー:
+実装例（`phase2_bayesian/scripts/run_nbox.py`より）:
 
 ```python
-"""efficiency_wrapper.py - analyze_efficiency.Cのラッパー"""
+def calculate_efficiency(self, thread_files: list, n_neutrons: int) -> dict:
+    """TChainでスレッドファイルを読み込み効率を計算"""
+    root_script = f'''
+#include "TChain.h"
+#include "TH1.h"
 
-import subprocess
-import re
-from pathlib import Path
+void calc_eff_temp() {{
+    TChain* chain = new TChain("NBox");
+'''
+    for f in thread_files:
+        root_script += f'    chain->Add("{f}");\n'
 
-def run_efficiency_analysis(work_dir, n_neutrons=100000):
-    """
-    analyze_efficiency.Cを実行して効率を取得
-
-    Parameters:
-    -----------
-    work_dir : str
-        ROOTファイルがあるディレクトリ
-    n_neutrons : int
-        入射中性子数（analyze_efficiency.C内の値と一致させる）
-
-    Returns:
-    --------
-    dict
-        効率情報 {'intrinsic': float, 'full_energy': float, 'per_ring': dict}
-    """
-    # analyze_efficiency.Cを実行
-    result = subprocess.run(
-        ['root', '-l', '-b', '-q', 'analyze_efficiency.C'],
-        cwd=work_dir,
-        capture_output=True,
-        text=True
-    )
-
-    # 出力から効率を抽出
-    output = result.stdout
-    efficiency = {}
-
-    # Intrinsic efficiency
-    match = re.search(r'Intrinsic efficiency.*: ([\d.]+) %', output)
-    if match:
-        efficiency['intrinsic'] = float(match.group(1))
-
-    # Full-energy efficiency
-    match = re.search(r'Full-energy efficiency.*: ([\d.]+) %', output)
-    if match:
-        efficiency['full_energy'] = float(match.group(1))
-
-    return efficiency
+    root_script += f'''
+    Long64_t n_hits = chain->GetEntries();
+    chain->Draw("EventID>>h_events({n_neutrons}, 0, {n_neutrons})", "", "goff");
+    TH1* h = (TH1*)gDirectory->Get("h_events");
+    Int_t n_events_with_hits = 0;
+    for (Int_t i = 1; i <= h->GetNbinsX(); i++) {{
+        if (h->GetBinContent(i) > 0) n_events_with_hits++;
+    }}
+    double efficiency = 100.0 * n_events_with_hits / {n_neutrons};
+    std::cout << "EFFICIENCY:" << efficiency << std::endl;
+}}
+'''
+    # ROOTスクリプトを実行して効率を取得
+    ...
 ```
 
 ---
@@ -694,21 +625,21 @@ def run_efficiency_analysis(work_dir, n_neutrons=100000):
 ## 8. 実装順序
 
 ### Step 1: 基盤整備
-1. [ ] モノエナジー中性子源のマクロファイル作成（各エネルギー用）
-2. [ ] シミュレーション実行・結果マージスクリプト作成
-3. [ ] 効率計算ラッパー作成（既存 `analyze_efficiency.C` を活用）
+1. [x] モノエナジー中性子源のマクロファイル作成（各エネルギー用）
+2. [x] ハードウェア乱数によるシード初期化（`nbox.cc`）
+3. [x] `/gun/energy`コマンドの修正（`PrimaryGeneratorAction.cc`）
 
 ### Step 2: Phase 1 実装
-4. [ ] フラックス記録用SteppingAction実装
-5. [ ] フラックスマップ解析スクリプト作成
-6. [ ] 各エネルギーでシミュレーション実行
-7. [ ] 結果解析・可視化
+4. [x] フラックス記録用SteppingAction実装（`FluxSteppingAction.cc`）
+5. [x] フラックスマップ解析スクリプト作成（`analyze_flux.C` - TChain使用）
+6. [x] 各エネルギーでシミュレーション実行（thermal, 0.1MeV, 10MeV, Cf-252）
+7. [x] 結果解析・可視化（3Dヒストグラム追加）
 
 ### Step 3: Phase 2 実装
-8. [ ] ベイズ最適化スクリプト作成
-9. [ ] 制約条件・目的関数実装
-10. [ ] 各エネルギーで最適化実行
-11. [ ] 結果解析
+8. [x] ベイズ最適化スクリプト作成（`bayesian_optimizer.py`）
+9. [x] 制約条件・目的関数実装（`geometry_generator.py`）
+10. [x] 1MeV中性子で最適化実行（76.87%効率達成）
+11. [ ] 他のエネルギーで最適化実行
 
 ### Step 4: Phase 3 実装
 12. [ ] 遺伝的アルゴリズムスクリプト作成
@@ -727,3 +658,4 @@ def run_efficiency_analysis(work_dir, n_neutrons=100000):
 | 日付 | バージョン | 変更内容 |
 |------|-----------|----------|
 | 2026-01-21 | 0.1 | 初版作成 |
+| 2026-01-22 | 0.2 | Phase 1, 2完了。hadd不要に変更（TChain使用）|
